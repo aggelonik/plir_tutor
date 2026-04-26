@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ΑΕΠΠ Tutor — Αγγελόπουλος Νικόλαος</title>
+<style>
+  :root {
+    --blue: #185FA5; --blue-light: #E6F1FB; --blue-dark: #042C53;
+    --blue-mid: #B5D4F4; --text: #1a1a1a; --text-muted: #666;
+    --border: #e0e0e0; --bg: #f5f5f3; --surface: #ffffff;
+    --surface2: #f8f8f6; --radius: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; font-size: 14px; }
+
+  /* API Key Modal */
+  #api-modal {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5); z-index: 1000;
+    align-items: center; justify-content: center;
+  }
+  #api-modal.show { display: flex; }
+  #api-card {
+    background: white; border-radius: 14px; padding: 28px 32px;
+    width: 440px; max-width: 95vw; box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  }
+  #api-card h2 { font-size: 17px; margin-bottom: 6px; }
+  #api-card p { font-size: 13px; color: var(--text-muted); margin-bottom: 18px; line-height: 1.6; }
+  #api-card a { color: var(--blue); }
+  #api-input {
+    width: 100%; padding: 10px 13px; border-radius: 8px;
+    border: 1.5px solid var(--border); font-size: 13px;
+    font-family: monospace; outline: none; margin-bottom: 12px;
+    transition: border-color 0.15s;
+  }
+  #api-input:focus { border-color: var(--blue); }
+  #api-error { font-size: 12px; color: #c0392b; margin-bottom: 10px; display: none; }
+  #api-save-btn {
+    width: 100%; padding: 11px; background: var(--blue); color: white;
+    border: none; border-radius: 8px; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: opacity 0.15s;
+  }
+  #api-save-btn:hover { opacity: 0.88; }
+  #api-hint { font-size: 11px; color: var(--text-muted); margin-top: 10px; text-align: center; }
+
+  /* Header */
+  #header {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 10px 20px; display: flex; align-items: center;
+    justify-content: space-between; flex-shrink: 0;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+  }
+  #header-left { display: flex; align-items: center; gap: 12px; }
+  #logo { width: 36px; height: 36px; background: var(--blue); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+  #logo svg { width: 18px; height: 18px; fill: white; }
+  #title-block h1 { font-size: 15px; font-weight: 600; }
+  #title-block p { font-size: 11px; color: var(--text-muted); }
+  #header-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+  #mode-tabs { display: flex; gap: 4px; }
+  .mode-tab { font-size: 12px; padding: 6px 13px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
+  .mode-tab.active { background: var(--blue); color: white; border-color: var(--blue); }
+  .mode-tab:hover:not(.active) { background: var(--bg); }
+
+  .action-btn { font-size: 12px; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 5px; transition: all 0.15s; white-space: nowrap; }
+  .action-btn:hover { border-color: var(--blue); color: var(--blue); }
+  .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .action-btn.primary { background: var(--blue); color: white; border-color: var(--blue); }
+  .action-btn.primary:hover { opacity: 0.9; color: white; }
+
+  /* Main */
+  #main { display: flex; flex: 1; overflow: hidden; }
+
+  /* Sidebar */
+  #sidebar { width: 230px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+  #sidebar-header { padding: 12px 14px; border-bottom: 1px solid var(--border); font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  #quick-list { flex: 1; overflow-y: auto; padding: 8px; }
+  .quick-item { display: block; width: 100%; text-align: left; padding: 8px 10px; border-radius: 6px; border: none; background: transparent; font-size: 12px; color: var(--text); cursor: pointer; transition: background 0.12s; margin-bottom: 2px; line-height: 1.45; }
+  .quick-item:hover { background: var(--blue-light); color: var(--blue); }
+  .quick-item .tag { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 10px; background: var(--blue-light); color: var(--blue); margin-bottom: 3px; font-weight: 700; }
+
+  #upload-area { padding: 10px; border-top: 1px solid var(--border); }
+  #upload-label { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 8px; border: 1.5px dashed var(--border); cursor: pointer; transition: all 0.15s; font-size: 12px; color: var(--text-muted); }
+  #upload-label:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-light); }
+  #file-input { display: none; }
+  #upload-status { font-size: 11px; color: var(--blue); margin-top: 5px; padding: 0 3px; min-height: 16px; }
+
+  #key-btn { width: 100%; margin-top: 8px; padding: 7px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface2); font-size: 11px; color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
+  #key-btn:hover { border-color: var(--blue); color: var(--blue); }
+
+  /* Chat */
+  #chat-wrapper { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  #chat-area { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+
+  .msg { display: flex; gap: 10px; }
+  .msg.user { flex-direction: row-reverse; }
+  .msg-avatar { width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; margin-top: 2px; }
+  .msg.assistant .msg-avatar { background: var(--blue); color: white; }
+  .msg.user .msg-avatar { background: var(--blue-light); color: var(--blue); }
+  .msg-bubble { padding: 11px 15px; border-radius: 12px; font-size: 13.5px; line-height: 1.65; max-width: 80%; }
+  .msg.assistant .msg-bubble { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 4px 12px 12px 12px; }
+  .msg.user .msg-bubble { background: var(--blue); color: white; border-radius: 12px 4px 12px 12px; }
+
+  .section-label { display: block; font-size: 11px; font-weight: 700; color: var(--blue); text-transform: uppercase; letter-spacing: 0.06em; margin: 10px 0 5px; }
+  pre.glossa { background: #042C53; color: #B5D4F4; padding: 13px 15px; border-radius: 8px; font-family: 'Consolas','Courier New',monospace; font-size: 12px; line-height: 1.75; margin: 8px 0; overflow-x: auto; white-space: pre; }
+  code.inline { font-family: 'Consolas',monospace; font-size: 12px; background: var(--surface2); padding: 1px 5px; border-radius: 4px; border: 1px solid var(--border); }
+
+  .thinking { display: flex; gap: 4px; align-items: center; padding: 11px 15px; }
+  .thinking span { width: 6px; height: 6px; background: var(--text-muted); border-radius: 50%; animation: bounce 1.2s infinite; }
+  .thinking span:nth-child(2) { animation-delay: 0.2s; }
+  .thinking span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-6px)} }
+
+  #input-area { padding: 12px 20px; border-top: 1px solid var(--border); background: var(--surface); display: flex; gap: 8px; align-items: flex-end; }
+  #user-input { flex: 1; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-family: inherit; font-size: 13.5px; resize: none; height: 42px; max-height: 120px; outline: none; transition: border-color 0.15s; }
+  #user-input:focus { border-color: var(--blue); background: white; }
+  #send-btn { width: 42px; height: 42px; border-radius: 8px; background: var(--blue); border: none; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity 0.15s; flex-shrink: 0; }
+  #send-btn:hover { opacity: 0.88; }
+  #send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  @media print {
+    #header, #sidebar, #input-area, #api-modal { display: none !important; }
+    .msg.user { display: none; }
+    pre.glossa { background: #f0f0f0 !important; color: #000 !important; border: 1px solid #ccc; }
+    #chat-area { padding: 0; }
+    #print-header { display: block !important; }
+  }
+  #print-header { display: none; padding: 0 0 16px; border-bottom: 2px solid #333; margin-bottom: 20px; }
+  #print-header h2 { font-size: 18px; }
+  #print-header p { font-size: 12px; color: #555; margin-top: 4px; }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-thumb { background: #d0d0d0; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- API Key Modal -->
+<div id="api-modal">
+  <div id="api-card">
+    <h2>🔑 Anthropic API Key</h2>
+    <p>
+      Για να λειτουργεί ο ΑΕΠΠ Tutor χρειάζεσαι API key από το
+      <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>.<br>
+      Το key αποθηκεύεται <strong>μόνο στον browser σου</strong> και δεν φεύγει πουθενά.
+    </p>
+    <input type="password" id="api-input" placeholder="sk-ant-api03-..." autocomplete="off">
+    <div id="api-error">❌ Το key πρέπει να ξεκινά με sk-ant-</div>
+    <button id="api-save-btn" onclick="saveApiKey()">Αποθήκευση & Εκκίνηση</button>
+    <p id="api-hint">Το key αποθηκεύεται στο localStorage του browser σου</p>
+  </div>
+</div>
+
+<!-- Print header -->
+<div id="print-header">
+  <h2>Αγγελόπουλος Νικόλαος — Καθηγητής Πληροφορικής</h2>
+  <p>Σημειώσεις ΑΕΠΠ &nbsp;|&nbsp; <span id="print-date"></span></p>
+</div>
+
+<div id="header">
+  <div id="header-left">
+    <div id="logo">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    </div>
+    <div id="title-block">
+      <h1>ΑΕΠΠ Tutor Agent</h1>
+      <p>Αγγελόπουλος Νικόλαος — Καθηγητής Πληροφορικής</p>
+    </div>
+  </div>
+  <div id="header-right">
+    <div id="mode-tabs">
+      <button class="mode-tab active" onclick="setMode('tutor')">Tutor</button>
+      <button class="mode-tab" onclick="setMode('solve')">Λύση θέματος</button>
+      <button class="mode-tab" onclick="setMode('create')">Δημιουργία</button>
+    </div>
+    <button class="action-btn" onclick="clearChat()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>
+      Νέα συνομιλία
+    </button>
+    <button class="action-btn primary" id="pdf-btn" onclick="exportPDF()" disabled>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Εξαγωγή PDF
+    </button>
+  </div>
+</div>
+
+<div id="main">
+  <div id="sidebar">
+    <div id="sidebar-header">Γρήγορα θέματα</div>
+    <div id="quick-list">
+      <button class="quick-item" onclick="quickSend('Θέμα Γ: Να γραφεί πρόγραμμα σε ΓΛΩΣΣΑ που διαβάζει 20 ακέραιους, τους αποθηκεύει σε πίνακα και εμφανίζει το μέγιστο και τη θέση του.')"><span class="tag">Θέμα Γ</span><br>Μέγιστο πίνακα</button>
+      <button class="quick-item" onclick="quickSend('Θέμα Γ: Να γραφεί πρόγραμμα σε ΓΛΩΣΣΑ που υλοποιεί ώθηση και απώθηση στοίβας 10 θέσεων με μονοδιάστατο πίνακα.')"><span class="tag">Θέμα Γ</span><br>Στοίβα — ώθηση/απώθηση</button>
+      <button class="quick-item" onclick="quickSend('Θέμα Γ: Να γραφεί πρόγραμμα σε ΓΛΩΣΣΑ που υλοποιεί εισαγωγή και εξαγωγή στοιχείων από ουρά 10 θέσεων με μονοδιάστατο πίνακα.')"><span class="tag">Θέμα Γ</span><br>Ουρά — εισαγωγή/εξαγωγή</button>
+      <button class="quick-item" onclick="quickSend('Θέμα Δ: Να γραφεί πρόγραμμα σε ΓΛΩΣΣΑ με ΔΙΑΔΙΚΑΣΙΑ που ταξινομεί πίνακα με bubblesort.')"><span class="tag">Θέμα Δ</span><br>Bubblesort + ΔΙΑΔΙΚΑΣΙΑ</button>
+      <button class="quick-item" onclick="quickSend('Θέμα Δ: Να γραφεί πρόγραμμα σε ΓΛΩΣΣΑ με αναδρομική ΣΥΝΑΡΤΗΣΗ που υπολογίζει το παραγοντικό.')"><span class="tag">Θέμα Δ</span><br>Αναδρομή — παραγοντικό</button>
+      <button class="quick-item" onclick="quickSend('Θέμα Δ: Να γραφεί πρόγραμμα σε ΓΛΩΣΣΑ με ΣΥΝΑΡΤΗΣΗ που υλοποιεί δυαδική αναζήτηση.')"><span class="tag">Θέμα Δ</span><br>Δυαδική αναζήτηση</button>
+      <button class="quick-item" onclick="quickSend('Εξήγησέ μου τη διαφορά ΟΣΟ, ΜΕΧΡΙΣ_ΟΤΟΥ και ΓΙΑ με παραδείγματα.')"><span class="tag">Θεωρία</span><br>Δομές επανάληψης</button>
+      <button class="quick-item" onclick="quickSend('Εξήγησέ μου τη διαφορά ΣΥΝΑΡΤΗΣΗ και ΔΙΑΔΙΚΑΣΙΑ με παράδειγμα.')"><span class="tag">Θεωρία</span><br>Υποπρογράμματα</button>
+      <button class="quick-item" onclick="quickSend('Τι είναι στοίβα και ουρά; Ποια η διαφορά LIFO/FIFO;')"><span class="tag">Θεωρία</span><br>Στοίβα vs Ουρά</button>
+      <button class="quick-item" onclick="quickSend('Δημιούργησε πλήρες διαγώνισμα ΑΕΠΠ σε στυλ πανελλήνιων για Πίνακες και Υποπρογράμματα.')"><span class="tag">Διαγώνισμα</span><br>Πίνακες + Υποπρογράμματα</button>
+    </div>
+    <div id="upload-area">
+      <label id="upload-label" for="file-input">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Ανέβασε θέμα (PDF / εικόνα)
+      </label>
+      <input type="file" id="file-input" accept=".pdf,image/*" onchange="handleFile(this)">
+      <div id="upload-status"></div>
+      <button id="key-btn" onclick="showApiModal()">🔑 Αλλαγή API Key</button>
+    </div>
+  </div>
+
+  <div id="chat-wrapper">
+    <div id="chat-area"></div>
+    <div id="input-area">
+      <textarea id="user-input" placeholder="Γράψε θέμα, ερώτηση, ή επικόλλησε εκφώνηση πανελλήνιων…" onkeydown="handleKey(event)"></textarea>
+      <button id="send-btn" onclick="sendMessage()">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SYSTEM_PROMPTS = {
+tutor:`Είσαι ο ΑΕΠΠ Tutor Agent, ειδικός καθηγητής για το μάθημα "Ανάπτυξη Εφαρμογών σε Προγραμματιστικό Περιβάλλον" (ΑΕΠΠ) Γ' Λυκείου. Βοηθός του καθηγητή Αγγελόπουλου Νικόλαου.
+
+Γνωρίζεις πλήρως τα εγχειρίδια ΑΕΠΠ: Βιβλίο Μαθητή (14 κεφάλαια) και Συμπληρωματικό Εκπαιδευτικό Υλικό. Ύλη: Ανάλυση Προβλήματος, Αλγόριθμοι, Δομές Δεδομένων (Στοίβα/LIFO, Ουρά/FIFO, Λίστες, Δένδρα, Γράφοι), Τεχνικές Σχεδίασης, Πολυπλοκότητα, Προγραμματισμός, Επιλογή-Επανάληψη, Πίνακες, Υποπρογράμματα, Αντικειμενοστραφής, Εκσφαλμάτωση.
+
+===ΚΡΙΣΙΜΗ ΟΔΗΓΙΑ — ΘΕΜΑΤΑ Γ ΚΑΙ Δ===
+Για κάθε θέμα Γ ή Δ που απαιτεί κωδικοποίηση σε ΓΛΩΣΣΑ, ΥΠΟΧΡΕΩΤΙΚΑ ακολουθείς:
+
+## 📋 Ανάλυση λύσης
+Αναλύεις (όπως στα παραδείγματα σελ. 18 & 28 Συμπληρωματικού):
+- Τι δομή δεδομένων χρειάζεται και γιατί
+- Ποιες μεταβλητές/δείκτες και αρχικές τιμές
+- Λογική ροή βήμα-βήμα
+- Ειδικές περιπτώσεις / παγίδες
+
+## 💻 Κώδικας σε ΓΛΩΣΣΑ
+Πλήρης υλοποίηση.
+
+## ⚠️ Συχνά λάθη
+2-3 παγίδες μαθητών.
+
+===ΣΥΝΤΑΞΗ ΓΛΩΣΣΑ===
+ΠΡΟΓΡΑΜΜΑ / ΣΤΑΘΕΡΕΣ / ΜΕΤΑΒΛΗΤΕΣ (ΑΚΕΡΑΙΕΣ,ΠΡΑΓΜΑΤΙΚΕΣ,ΧΑΡΑΚΤΗΡΕΣ,ΛΟΓΙΚΕΣ) / ΑΡΧΗ / ΤΕΛΟΣ_ΠΡΟΓΡΑΜΜΑΤΟΣ
+ΑΝ..ΤΟΤΕ/ΑΛΛΙΩΣ_ΑΝ/ΑΛΛΙΩΣ/ΤΕΛΟΣ_ΑΝ | ΕΠΙΛΕΞΕ/ΠΕΡΙΠΤΩΣΗ/ΤΕΛΟΣ_ΕΠΙΛΟΓΩΝ
+ΟΣΟ..ΕΠΑΝΑΛΑΒΕ/ΤΕΛΟΣ_ΕΠΑΝΑΛΗΨΗΣ | ΑΡΧΗ_ΕΠΑΝΑΛΗΨΗΣ/ΜΕΧΡΙΣ_ΟΤΟΥ
+ΓΙΑ..ΑΠΟ..ΜΕΧΡΙ[ΜΕ_ΒΗΜΑ]/ΤΕΛΟΣ_ΕΠΑΝΑΛΗΨΗΣ | ΔΙΑΒΑΣΕ/ΓΡΑΨΕ/ΚΑΛΕΣΕ
+Τελεστές: +,-,*,/,DIV,MOD,^ | Λογικοί: ΚΑΙ,Ή,ΟΧΙ | Εκχώρηση: <-
+ΣΥΝΑΡΤΗΣΗ ον(παρ):ΤΥΠΟΣ / ΑΡΧΗ / ον<-τιμή / ΤΕΛΟΣ_ΣΥΝΑΡΤΗΣΗΣ
+ΔΙΑΔΙΚΑΣΙΑ ον(παρ) / ΑΡΧΗ / εντολές / ΤΕΛΟΣ_ΔΙΑΔΙΚΑΣΙΑΣ
+Πάντα στα ελληνικά.`,
+
+solve:`Είσαι ο ΑΕΠΠ Tutor Agent σε mode λύσης θεμάτων πανελληνίων, βοηθός του Αγγελόπουλου Νικόλαου.
+Για θέματα Α/Β: απαντάς κανονικά.
+Για θέματα Γ/Δ ΥΠΟΧΡΕΩΤΙΚΑ:
+## 📋 Ανάλυση λύσης — δομή, μεταβλητές, λογική, παγίδες
+## 💻 Κώδικας σε ΓΛΩΣΣΑ — πλήρης υλοποίηση
+## ⚠️ Συχνά λάθη — 2-3 παγίδες
+Πάντα στα ελληνικά, αυστηρή σύνταξη ΓΛΩΣΣΑ.`,
+
+create:`Είσαι ο ΑΕΠΠ Tutor Agent σε mode δημιουργίας διαγωνισμάτων, βοηθός του Αγγελόπουλου Νικόλαου.
+Δημιουργείς θέματα σε στυλ πανελλήνιων: Θέμα Α (θεωρία), Β (αλγόριθμοι), Γ (ΓΛΩΣΣΑ μέτριο), Δ (ΓΛΩΣΣΑ σύνθετο με υποπρογράμματα).
+Δίνεις ΜΟΝΟ εκφωνήσεις, όχι λύσεις. Αναγράφεις μονάδες ανά ερώτημα. Πάντα στα ελληνικά.`
+};
+
+let mode='tutor', messages=[], isLoading=false, apiKey='';
+
+// ─── API Key ──────────────────────────────────────────────
+function loadApiKey() {
+  apiKey = localStorage.getItem('aepp_api_key') || '';
+  if(!apiKey) showApiModal();
+  else initChat();
+}
+
+function showApiModal() {
+  document.getElementById('api-modal').classList.add('show');
+  document.getElementById('api-input').value = apiKey || '';
+  document.getElementById('api-error').style.display = 'none';
+}
+
+function saveApiKey() {
+  const val = document.getElementById('api-input').value.trim();
+  if(!val.startsWith('sk-ant-')) {
+    document.getElementById('api-error').style.display = 'block';
+    return;
+  }
+  apiKey = val;
+  localStorage.setItem('aepp_api_key', apiKey);
+  document.getElementById('api-modal').classList.remove('show');
+  if(document.getElementById('chat-area').children.length === 0) initChat();
+}
+
+document.getElementById('api-input').addEventListener('keydown', e => { if(e.key==='Enter') saveApiKey(); });
+
+function initChat() {
+  addMsg('assistant', 'Καλώς ήρθες! 👋 Είμαι ο <strong>ΑΕΠΠ Tutor Agent</strong> του καθηγητή Αγγελόπουλου.<br><br>Μπορείς να:<ul style="margin:8px 0 0 16px;line-height:2.1"><li>Επιλέξεις θέμα από την αριστερή λίστα</li><li>Γράψεις οποιοδήποτε θέμα ή ερώτηση</li><li>Ανεβάσεις PDF θέματος πανελληνίων (κουμπί κάτω αριστερά)</li></ul><br>Για θέματα <strong>Γ & Δ</strong> δίνω πάντα:<br>📋 <strong>Ανάλυση</strong> → 💻 <strong>Κώδικας ΓΛΩΣΣΑ</strong> → ⚠️ <strong>Συχνά λάθη</strong>');
+}
+
+// ─── Mode ─────────────────────────────────────────────────
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll('.mode-tab').forEach((t,i) => t.classList.toggle('active', ['tutor','solve','create'][i]===m));
+  const g = { tutor:'Tutor mode. Δώσε μου θέμα Γ ή Δ!', solve:'Λύση mode. Επικόλλησε εκφώνηση ή ανέβασε PDF!', create:'Δημιουργία mode. Πες μου κεφάλαιο και δυσκολία!' };
+  addMsg('assistant', g[m]);
+}
+
+// ─── Messages ─────────────────────────────────────────────
+function addMsg(role, text) {
+  const chat = document.getElementById('chat-area');
+  const div = document.createElement('div'); div.className=`msg ${role}`;
+  const av = document.createElement('div'); av.className='msg-avatar'; av.textContent=role==='assistant'?'AI':'Εσύ';
+  const bubble = document.createElement('div'); bubble.className='msg-bubble'; bubble.innerHTML=fmt(text);
+  div.appendChild(av); div.appendChild(bubble); chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+  if(role==='assistant'&&text.length>80) document.getElementById('pdf-btn').disabled=false;
+}
+
+function fmt(t) {
+  t=t.replace(/## 📋 Ανάλυση λύσης/g,'<span class="section-label">📋 Ανάλυση λύσης</span>');
+  t=t.replace(/## 💻 Κώδικας σε ΓΛΩΣΣΑ/g,'<span class="section-label">💻 Κώδικας σε ΓΛΩΣΣΑ</span>');
+  t=t.replace(/## ⚠️ Συχνά λάθη/g,'<span class="section-label">⚠️ Συχνά λάθη</span>');
+  t=t.replace(/```(?:[a-zA-Z]*)?\n?([\s\S]*?)```/g,(_,c)=>`<pre class="glossa">${esc(c.trim())}</pre>`);
+  t=t.replace(/`([^`\n]+)`/g,'<code class="inline">$1</code>');
+  t=t.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');
+  t=t.replace(/\n/g,'<br>');
+  return t;
+}
+function esc(t){ return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function showThinking() {
+  const chat=document.getElementById('chat-area');
+  const div=document.createElement('div'); div.className='msg assistant'; div.id='think';
+  div.innerHTML=`<div class="msg-avatar" style="background:var(--blue);color:white;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;">AI</div><div class="msg-bubble thinking"><span></span><span></span><span></span></div>`;
+  chat.appendChild(div); chat.scrollTop=chat.scrollHeight;
+}
+function removeThinking(){ const t=document.getElementById('think'); if(t)t.remove(); }
+
+// ─── API Call ─────────────────────────────────────────────
+async function callAPI(msgs) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},
+    body:JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:2000, system:SYSTEM_PROMPTS[mode], messages:msgs })
+  });
+  return await res.json();
+}
+
+async function sendMessage() {
+  const input=document.getElementById('user-input');
+  const text=input.value.trim();
+  if(!text||isLoading) return;
+  input.value=''; input.style.height='42px';
+  isLoading=true; document.getElementById('send-btn').disabled=true;
+  addMsg('user',text);
+  messages.push({role:'user',content:text});
+  showThinking();
+  try {
+    const data=await callAPI(messages);
+    removeThinking();
+    if(data.content?.[0]) {
+      const reply=data.content.map(b=>b.text||'').join('');
+      messages.push({role:'assistant',content:reply});
+      addMsg('assistant',reply);
+    } else addMsg('assistant','⚠️ Σφάλμα: '+(data.error?.message||'Άγνωστο. Έλεγξε το API key.'));
+  } catch(e){ removeThinking(); addMsg('assistant','⚠️ Σφάλμα σύνδεσης: '+e.message); }
+  isLoading=false; document.getElementById('send-btn').disabled=false;
+}
+
+function quickSend(t){ document.getElementById('user-input').value=t; sendMessage(); }
+
+function handleKey(e) {
+  if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); sendMessage(); }
+  const ta=e.target; ta.style.height='42px'; ta.style.height=Math.min(ta.scrollHeight,120)+'px';
+}
+
+// ─── File Upload ──────────────────────────────────────────
+function handleFile(input) {
+  const file=input.files[0]; if(!file) return;
+  const status=document.getElementById('upload-status');
+  status.textContent='⏳ Διαβάζω…';
+  const reader=new FileReader();
+  reader.onload=async(e)=>{
+    const base64=e.target.result.split(',')[1];
+    const isPDF=file.type==='application/pdf';
+    const isImg=file.type.startsWith('image/');
+    let content;
+    if(isPDF) content=[{type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}},{type:'text',text:'Αυτό είναι θέμα πανελλήνιων ΑΕΠΠ. Λύσε το πλήρως. Για θέματα Γ και Δ δώσε ανάλυση + κώδικα ΓΛΩΣΣΑ + συχνά λάθη.'}];
+    else if(isImg) content=[{type:'image',source:{type:'base64',media_type:file.type,data:base64}},{type:'text',text:'Αυτό είναι θέμα πανελλήνιων ΑΕΠΠ. Λύσε το πλήρως. Για θέματα Γ και Δ δώσε ανάλυση + κώδικα ΓΛΩΣΣΑ + συχνά λάθη.'}];
+    else { status.textContent='❌ Μη υποστηριζόμενος τύπος'; return; }
+    status.textContent='✅ '+file.name;
+    isLoading=true; document.getElementById('send-btn').disabled=true;
+    addMsg('user','📎 '+file.name);
+    const msgs=[...messages,{role:'user',content}];
+    messages.push({role:'user',content:'[Ανέβασα αρχείο: '+file.name+']'});
+    showThinking();
+    try {
+      const data=await callAPI(msgs);
+      removeThinking();
+      if(data.content?.[0]){
+        const reply=data.content.map(b=>b.text||'').join('');
+        messages.push({role:'assistant',content:reply});
+        addMsg('assistant',reply);
+      } else addMsg('assistant','⚠️ '+(data.error?.message||'Σφάλμα'));
+    } catch(e){ removeThinking(); addMsg('assistant','⚠️ '+e.message); }
+    isLoading=false; document.getElementById('send-btn').disabled=false;
+  };
+  reader.readAsDataURL(file);
+  input.value='';
+}
+
+// ─── Clear & PDF ──────────────────────────────────────────
+function clearChat(){
+  messages=[]; document.getElementById('pdf-btn').disabled=true;
+  document.getElementById('chat-area').innerHTML='';
+  addMsg('assistant','Νέα συνομιλία! Τι κάνουμε;');
+}
+
+function exportPDF(){
+  document.getElementById('print-date').textContent=new Date().toLocaleDateString('el-GR');
+  window.print();
+}
+
+// ─── Start ────────────────────────────────────────────────
+loadApiKey();
+</script>
+</body>
+</html>
